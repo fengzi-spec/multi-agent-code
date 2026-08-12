@@ -102,13 +102,13 @@
 │       ▼              ▼              ▼            │
 │   审查+评分      审查+评分      审查+评分          │
 │   (每轮/每N轮/最后审查)                            │
+│                                                   │
+│ Tester 在行为变化、修复回归或存在明确覆盖缺口时，   │
+│ 在轮内新增或更新测试；已有相关测试每轮都会执行。     │
 └──────────────────────────────────────────────────┘
     │
     ▼
-  最终汇总 + 评分趋势 + 验证报告
-    │
-    ▼
-  最终汇总 + 所有产物
+  最终汇总 + 评分趋势 + 验证报告 + 所有产物
 ```
 
 ---
@@ -410,10 +410,40 @@ Skill 会优先使用宿主提供的真实子代理；如果当前产品不支�
 - `scripts/pipeline_state.py` 确定性地生成任务 ID、保存 Git 基线、原子更新状态并校验恢复数据。
 - 宿主产品负责真正的文件编辑、命令执行和子代理调用；本仓库不是独立运行的代码生成服务。
 
-状态脚本仅依赖 Python 标准库，可单独检查：
+状态脚本仅依赖 Python 标准库。下面的模式当前会匹配 `scripts/test_pipeline_state.py`：
 
 ```bash
 python -m unittest discover -s scripts -p "test_*.py" -v
+```
+
+### 三个可选辅助功能
+
+**1. 需求文件（推荐）**
+
+把完整需求写入 UTF-8 文件，可以保留多行格式，并避免需求内容出现在终端历史或进程参数中：
+
+```bash
+python scripts/pipeline_state.py init --project ./my-project --request-file ./task.md --max-rounds 8
+```
+
+`5` 只是默认轮数。`--max-rounds` 可以修改为任意正整数；也可以在调用 Skill 时直接说“最多运行 8 轮”。短且不敏感的需求仍可使用 `--request`。
+
+**2. Dry run（预演）**
+
+加入 `--dry-run` 后只输出计划生成的 task ID、目录和文件，不修改目标项目：
+
+```bash
+python scripts/pipeline_state.py init --project ./my-project --request-file ./task.md --max-rounds 8 --dry-run
+```
+
+确认结果后去掉 `--dry-run` 才会真正初始化。
+
+**3. 最小示例项目**
+
+`examples/calculator-validation/` 是一个可以复制到临时目录的小型计算器示例。它已有可运行测试，示例任务要求增加输入校验和回归测试，可用于体验完整的多轮修改流程。不要直接修改 Skill 内的原始示例。
+
+```bash
+python -m unittest discover -s examples/calculator-validation -p "test_*.py" -v
 ```
 
 ### 前提

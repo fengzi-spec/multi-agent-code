@@ -40,7 +40,9 @@ Store orchestration metadata under `.pipeline/`. Do not put generated applicatio
 - If an unfinished task matches the user's request, resume from the last completed phase after verifying the filesystem still matches the recorded state.
 - Write state atomically after each completed phase or round. Record status, round, changed files, pending findings, validation results, and stop reason.
 
-Use `python scripts/pipeline_state.py init --project <project> --request "<request>" --max-rounds 5` to initialize task state and capture the baseline. Use its `update` command for atomic state changes and `validate` before resuming or finishing. Resolve the script path relative to this `SKILL.md`, not the target project.
+Prefer `python scripts/pipeline_state.py init --project <project> --request-file <request-file> --max-rounds 5` so long or sensitive requirements do not appear in process arguments. Use `--request` only for short, non-sensitive requests. Add `--dry-run` to preview the task ID, paths, and planned files without writing anything. Use `update` for atomic state changes and `validate` before resuming or finishing. Resolve the script path relative to this `SKILL.md`, not the target project.
+
+Use `examples/calculator-validation/` only when the user asks for a minimal demonstration or smoke test of this skill. Copy it to a temporary project before running the workflow so the bundled example remains unchanged.
 
 Never add `requirements.md`, `spec.md`, or `architecture.md` to the project root unless the user requests project documentation. Keep pipeline-only artifacts under `.pipeline/`.
 
@@ -92,7 +94,7 @@ Stop when quality gates pass, the maximum round count is reached, progress stall
 
 ## Finish and report
 
-Perform a final fresh-context review of the complete diff and rerun applicable checks. Update task state with one of: `completed`, `verified_with_limitations`, `max_rounds`, `blocked`, or `stopped_by_user`.
+Perform a final fresh-context review of the complete diff and rerun applicable checks. Update task state with one of: `completed`, `verified_with_limitations`, `max_rounds`, `progress_stalled`, `blocked`, or `stopped_by_user`.
 
 Report:
 

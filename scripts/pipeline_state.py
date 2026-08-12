@@ -24,6 +24,26 @@ FINAL_STATUSES = {
     "blocked",
     "stopped_by_user",
 }
+VALID_STATUSES = {"active", *FINAL_STATUSES}
+REQUIRED_STATE_KEYS = (
+    "schema_version",
+    "task_id",
+    "request_sha256",
+    "status",
+    "phase",
+    "current_round",
+    "max_rounds",
+    "rounds_completed",
+    "pending_findings",
+    "validation_history",
+    "score_history",
+    "stall_counter",
+    "severity_hit_round",
+    "fix_rounds_used",
+    "stop_reason",
+    "created_at",
+    "updated_at",
+)
 
 
 def utc_now() -> str:
@@ -79,6 +99,35 @@ def unique_task_id(tasks_dir: Path, request: str, now: datetime | None = None) -
         candidate = f"{base}-{counter}"
         counter += 1
     return candidate
+
+
+def plan_initialization(project: Path, request: str, max_rounds: int) -> dict[str, Any]:
+    if max_rounds < 1:
+        raise ValueError("max_rounds must be at least 1")
+    project = project.resolve()
+    if not project.is_dir():
+        raise ValueError(f"project directory does not exist: {project}")
+    tasks = project / ".pipeline" / "tasks"
+    task_id = unique_task_id(tasks, request)
+    task_dir = tasks / task_id
+    return {
+        "dry_run": True,
+        "project": str(project),
+        "task_id": task_id,
+        "task_dir": str(task_dir),
+        "max_rounds": max_rounds,
+        "request_sha256": request_digest(request),
+        "planned_files": [
+            str(task_dir / "request.md"),
+            str(task_dir / "baseline.json"),
+            str(task_dir / "baseline.patch"),
+            str(task_dir / "state.json"),
+            str(task_dir / "validation.json"),
+            str(task_dir / "change_log.md"),
+            str(task_dir / "open_concerns.md"),
+            str(task_dir / "reviews"),
+        ],
+    }
 
 
 def capture_baseline(project: Path, task_dir: Path) -> dict[str, Any]:
@@ -146,6 +195,8 @@ def initialize(project: Path, request: str, max_rounds: int) -> dict[str, Any]:
         "validation_history": [],
         "score_history": [],
         "stall_counter": 0,
+        "severity_hit_round": None,
+        "fix_rounds_used": 0,
         "stop_reason": None,
         "created_at": utc_now(),
         "updated_at": utc_now(),
@@ -181,8 +232,44 @@ def update_state(project: Path, task_id: str, assignments: list[str]) -> dict[st
             raise ValueError(f"state key is immutable: {key}")
         state[key] = value
     state["updated_at"] = utc_now()
+    errors = validate_state_data(state, task_id)
+    if errors:
+        raise ValueError("invalid state update: " + "; ".join(errors))
     atomic_json_write(state_path, state)
     return state
+
+
+def validate_state_data(state: dict[str, Any], task_id: str) -> list[str]:
+    errors: list[str] = []
+    for key in REQUIRED_STATE_KEYS:
+        if key not in state:
+            errors.append(f"state.json missing {key}")
+    if state.get("task_id") != task_id:
+        errors.append("state task_id does not match directory")
+    if state.get("status") not in VALID_STATUSES:
+        errors.append(f"status must be one of: {', '.join(sorted(VALID_STATUSES))}")
+    if not isinstance(state.get("current_round"), int) or state.get("current_round", -1) < 0:
+        errors.append("current_round must be a non-negative integer")
+    if not isinstance(state.get("max_rounds"), int) or state.get("max_rounds", 0) < 1:
+        errors.append("max_rounds must be a positive integer")
+    if (
+        isinstance(state.get("current_round"), int)
+        and isinstance(state.get("max_rounds"), int)
+        and state["current_round"] > state["max_rounds"]
+    ):
+        errors.append("current_round cannot exceed max_rounds")
+    for key in ("rounds_completed", "pending_findings", "validation_history", "score_history"):
+        if key in state and not isinstance(state[key], list):
+            errors.append(f"{key} must be a list")
+    for key in ("stall_counter", "fix_rounds_used"):
+        if key in state and (not isinstance(state[key], int) or state[key] < 0):
+            errors.append(f"{key} must be a non-negative integer")
+    severity_round = state.get("severity_hit_round")
+    if severity_round is not None and (not isinstance(severity_round, int) or severity_round < 1):
+        errors.append("severity_hit_round must be null or a positive integer")
+    if state.get("status") in FINAL_STATUSES and not state.get("stop_reason"):
+        errors.append("final state requires stop_reason")
+    return errors
 
 
 def validate_task(project: Path, task_id: str) -> list[str]:
@@ -198,17 +285,7 @@ def validate_task(project: Path, task_id: str) -> list[str]:
         state = json.loads((task_dir / "state.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         return [f"invalid state.json: {exc}"]
-    for key in ("schema_version", "task_id", "request_sha256", "status", "phase", "current_round", "max_rounds"):
-        if key not in state:
-            errors.append(f"state.json missing {key}")
-    if state.get("task_id") != task_id:
-        errors.append("state task_id does not match directory")
-    if not isinstance(state.get("current_round"), int) or state.get("current_round", -1) < 0:
-        errors.append("current_round must be a non-negative integer")
-    if not isinstance(state.get("max_rounds"), int) or state.get("max_rounds", 0) < 1:
-        errors.append("max_rounds must be a positive integer")
-    if state.get("status") in FINAL_STATUSES and not state.get("stop_reason"):
-        errors.append("final state requires stop_reason")
+    errors.extend(validate_state_data(state, task_id))
     return errors
 
 
@@ -221,6 +298,7 @@ def build_parser() -> argparse.ArgumentParser:
     request_group.add_argument("--request")
     request_group.add_argument("--request-file", type=Path)
     init.add_argument("--max-rounds", type=int, default=5)
+    init.add_argument("--dry-run", action="store_true", help="show the initialization plan without writing files")
     update = subparsers.add_parser("update", help="atomically update task state")
     update.add_argument("--project", type=Path, default=Path.cwd())
     update.add_argument("--task-id", required=True)
@@ -236,7 +314,12 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "init":
             request = args.request_file.read_text(encoding="utf-8") if args.request_file else args.request
-            print(json.dumps(initialize(args.project, request, args.max_rounds), ensure_ascii=False, indent=2))
+            result = (
+                plan_initialization(args.project, request, args.max_rounds)
+                if args.dry_run
+                else initialize(args.project, request, args.max_rounds)
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2))
         elif args.command == "update":
             print(json.dumps(update_state(args.project, args.task_id, args.assignments), ensure_ascii=False, indent=2))
         else:

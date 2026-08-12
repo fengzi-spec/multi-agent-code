@@ -100,18 +100,16 @@ User Request
 │  └──────────┘    └──────────┘    └──────────┘        │
 │       │               │               │              │
 │       ▼               ▼               ▼              │
+│  Validate/Test   Validate/Test   Validate/Test        │
+│       │               │               │              │
+│       ▼               ▼               ▼              │
 │    Review?         Review?         Review?            │
 │   (per_round)     (per_round)     (per_round)         │
 │   (batch)         (skip)          (batch)             │
 │   (milestone)     (milestone)     (milestone)         │
-└──────────────────────────────────────────────────────┘
-    │
-    ▼
-┌──────────────────────────────────────────────────────┐
-│                  OPTIONAL PHASES                       │
-│  ┌──────────┐                                         │
-│  │  Tester  │  ──→  Test suite + coverage report      │
-│  └──────────┘                                         │
+│  Tester writes or updates tests inside a round when   │
+│  behavior changes, a regression is fixed, or coverage │
+│  has a demonstrated gap. Existing tests always run.   │
 └──────────────────────────────────────────────────────┘
     │
     ▼
@@ -173,7 +171,7 @@ User Request
 
 ### Pipeline Stop Logic
 
-The pipeline stops on **three conditions** (whichever happens first).
+The pipeline stops on **four conditions** (whichever happens first): quality gates pass, severity fix attempts are exhausted, progress stalls for two rounds, or max rounds are reached.
 When severity threshold is hit, the Critic gets `fix_attempts` chances to fix before stopping:
 
 ```
@@ -364,11 +362,11 @@ All 5 roles, 15 refinement rounds max.
 ```
 Agents auto-discover `src/auth.py` and modify it in-place. No manual file selection needed.
 
-### "Score-driven quality gate"
+### "Advisory score target"
 ```
 /multi-agent-code --target-score 8.5 --score-stability 2 "Refactor the DB layer"
 ```
-Stops when code hits 8.5+ for 2 consecutive rounds.
+Highlights when code hits 8.5+ for 2 consecutive rounds; executable quality gates still decide completion.
 
 ### "Sandbox mode" (when you want isolation)
 ```
@@ -425,11 +423,43 @@ The skill uses real subagents when the host provides them. Otherwise it performs
 - `scripts/pipeline_state.py` deterministically creates task IDs, captures Git baselines, atomically updates state, and validates resume data.
 - The host product performs file edits, command execution, and subagent calls; this repository is not a standalone code-generation service.
 
-The state helper uses only the Python standard library. Run its tests with:
+The state helper uses only the Python standard library. The pattern below currently matches `scripts/test_pipeline_state.py`:
 
 ```bash
 python -m unittest discover -s scripts -p "test_*.py" -v
 ```
+
+### Optional helpers
+
+**1. Request file (recommended)**
+
+Store the complete request in a UTF-8 file to preserve multiline formatting and keep it out of shell history and process arguments:
+
+```bash
+python scripts/pipeline_state.py init --project ./my-project --request-file ./task.md --max-rounds 8
+```
+
+Five is only the default round limit. Set `--max-rounds` to any positive integer, or tell the skill “run at most 8 rounds.” `--request` remains available for short, non-sensitive requests.
+
+**2. Dry run**
+
+Add `--dry-run` to print the planned task ID, directory, and files without modifying the target project:
+
+```bash
+python scripts/pipeline_state.py init --project ./my-project --request-file ./task.md --max-rounds 8 --dry-run
+```
+
+Remove `--dry-run` after checking the plan to perform initialization.
+
+**3. Minimal example project**
+
+`examples/calculator-validation/` is a copyable calculator fixture with runnable tests. Its task asks the skill to add input validation and regression coverage, demonstrating the complete iterative workflow. Copy it to a temporary project instead of editing the bundled fixture.
+
+```bash
+python -m unittest discover -s examples/calculator-validation -p "test_*.py" -v
+```
+
+### Install for Claude Code
 
 1. Copy the `multi-agent-code/` directory into your Claude Code skills directory:
 
