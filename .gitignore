@@ -1,0 +1,16 @@
+# Pipeline output (generated code artifacts)
+output/
+
+# Pipeline state
+.pipeline/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
