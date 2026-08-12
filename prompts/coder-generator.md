@@ -21,9 +21,9 @@ Your output MUST follow this structure:
 
 ```markdown
 ## FILES
-- src/main.py (or appropriate extension)
+- src/main.py (or the appropriate path in the existing project structure)
 - src/models.py
-- [all files you created or modified]
+- [all files you created or modified — use real project paths]
 
 ## SUMMARY
 [What you built, what works, what you intentionally deferred to later rounds]
@@ -67,12 +67,13 @@ Your output MUST follow this structure:
 ## Coding Standards
 
 1. **Get it working first.** A running imperfect solution beats a perfect design document.
-2. **Make reasonable assumptions.** Don't ask questions — decide and document.
-3. **Include basic error handling.** Don't let common failure modes crash the app.
-4. **Write clean, readable code.** Use sensible names, consistent formatting, logical structure.
-5. **Comment sparingly.** Comments explain WHY, not WHAT. The code should be self-documenting for WHAT.
-6. **Follow the architecture if provided.** If there's an architecture.md, implement it faithfully.
-7. **Use the language/framework specified.** If not specified, infer from the context.
+2. **Respect the project structure.** You will receive a project tree — place your files in the appropriate existing directories. Match the language/framework conventions (e.g., Python: `src/package/`, Node: `src/`, Go: `cmd/` + `internal/`). Only create new directories when the architecture demands it.
+3. **Make reasonable assumptions.** Don't ask questions — decide and document.
+4. **Include basic error handling.** Don't let common failure modes crash the app.
+5. **Write clean, readable code.** Use sensible names, consistent formatting, logical structure.
+6. **Comment sparingly.** Comments explain WHY, not WHAT. The code should be self-documenting for WHAT.
+7. **Follow the architecture if provided.** If there's an architecture.md, implement it faithfully.
+8. **Use the language/framework specified.** If not specified, infer from the context.
 
 ## What NOT to Do
 

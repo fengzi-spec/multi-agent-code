@@ -41,13 +41,18 @@ The skill shows the **default configuration** and waits for your go-ahead:
 ╔══════════════════════════════════════════════════════════╗
 ║           Multi-Agent Code — 当前配置                     ║
 ╠══════════════════════════════════════════════════════════╣
-║  1. 最大轮次:     10    (跑到10轮或触发停止条件时停)      ║
+║  1. 最大轮次:     5     (跑到5轮或触发停止条件时停)       ║
 ║  2. 可选角色:     无    (analyst / architect / tester)   ║
 ║  3. 审查时机:     每轮   (每轮 / 每N轮 / 最后)            ║
 ║  4. 停止条件:     critical (critical/high/medium时停)    ║
-║  5. 自动/手动:    自动   (触发停止条件时自动停)            ║
-║  6. 编程语言:     Python (自动检测)                       ║
-║  7. 输出目录:     ./output                               ║
+║  5. 修复尝试:     1次    (发现严重问题后给几次修复机会)    ║
+║  6. 自动/手动:    自动   (修复失败后自动停还是问你)        ║
+║  7. 编程语言:     (自动检测)                              ║
+║  8. 输出目录:     . (当前项目)                           ║
+║  9. 目标评分:     关闭   (达到X分建议达标，0=关闭)        ║
+║ 10. 评分稳定性:   1轮    (连续N轮达标才标记稳定)           ║
+║ 11. 评分权重:     balanced (balanced/security-first/      ║
+║                          performance-first/自定义)        ║
 ║                                                          ║
 ║  回复"go"使用默认配置，或者告诉我你想改的参数              ║
 ╚══════════════════════════════════════════════════════════╝
@@ -58,15 +63,12 @@ Reply **"go"** to accept the defaults, or change anything inline:
 - `"每2轮审查，high时停止"` → review_strategy=milestone:2, stop_on=high
 
 Then the pipeline runs. It stops when:
-- **Review finds no issues** → quality achieved! ✅
-- **Review finds issues >= stop severity** → problem found, stop early ⚠️
+- **Validation passes + no critical/high findings** → quality achieved! ✅
+- **Severity threshold hit + fix attempts exhausted** → can't fix, stop ⚠️
+- **Progress stalls for 2 rounds** → no improvement 🛑
 - **Max rounds reached** → finished all iterations
 
-You can also skip the config screen entirely:
-```
-/multi-agent-code --defaults "Create a CLI tool"
-/multi-agent-code --max-rounds 5 --roles analyst "Build an API"
-```
+> 💡 Agents work **in-place** in your project. Code goes to `src/`, `tests/`, etc. Only `.pipeline/` is added. Reviewer scores are advisory diagnostics — **executable validation (build/lint/test)** is the real quality gate.
 
 ---
 
@@ -126,15 +128,18 @@ User Request
 
 | Parameter | Default | What It Does |
 |-----------|---------|-------------|
-| **最大轮次** | `10` | Max coding rounds before the pipeline stops. Can be any number. |
+| **最大轮次** | `5` | Max coding rounds before the pipeline stops. Can be any positive number. |
 | **可选角色** | (none) | Enable `analyst`, `architect`, `tester`. `coder` + `reviewer` are always on. |
 | **审查时机** | `per_round` | `per_round` (every round), `milestone:N` (every N rounds), `batch` (after final round). |
 | **停止条件** | `critical` | If review finds issues at or above this severity, enter fix-attempt grace period. `critical` / `high` / `medium` / `never`. |
 | **修复尝试** | `1` | How many coding rounds to attempt fixes after severity threshold is hit. `0` = stop immediately. |
 | **自动/手动** | `true` | When fix attempts exhausted: `true` = auto-stop. `false` = pause and ask you. |
 | **编程语言** | auto-detect | Inferred from your task. Override with `--language`. |
-| **输出目录** | `./output` | Where code, docs, and reports are saved. |
+| **输出目录** | `.` (current project) | Where code is generated. Agents work in-place by default. Change to `./output` for sandbox mode. |
 | **上下文文件** | (none) | Existing files to modify or use as context. |
+| **目标评分** | `0` (off) | Advisory score target used to highlight progress. It never overrides validation. |
+| **评分稳定性** | `1` | Consecutive rounds above the advisory target before marking the score stable. |
+| **评分权重** | `balanced` | Weight preset: `balanced`, `security-first`, `performance-first`, or custom `security:3,performance:0.5`. |
 
 ### Three Ways to Configure
 
@@ -156,6 +161,9 @@ User Request
 | `--language X` | `--language Go` | Target programming language |
 | `--files X,Y` | `--files src/main.py` | Existing files as context |
 | `--output-dir X` | `--output-dir ./my-project` | Output directory |
+| `--target-score X` | `--target-score 8.5` | Target composite score |
+| `--score-stability N` | `--score-stability 2` | Consecutive rounds to confirm score |
+| `--score-weights X` | `--score-weights security-first` | Weight preset for dimensions |
 | `--defaults` | `--defaults` | Skip config screen, use all defaults |
 
 **3. Natural language:**
@@ -172,7 +180,7 @@ When severity threshold is hit, the Critic gets `fix_attempts` chances to fix be
 Round 1: Coder → Review → 1 critical issue
          → 进入修复期 (1次机会) → 继续
 Round 2: Coder(Critic修复) → Review → critical问题已修复 → ✅ 继续正常迭代
-Round 3: Coder → Review → 0 issues → ✅ STOP (quality achieved!)
+Round 3: Coder → validation passes → Review finds no critical/high → ✅ STOP
 
 -- 或者修复失败的场景 --
 Round 1: Coder → Review → 1 critical issue
@@ -202,6 +210,55 @@ Round 2: Coder(Critic修复) → Review → 仍有critical
 
 ---
 
+## Multi-Dimensional Code Scoring 🎯
+
+Each review round, the Reviewer scores code across **6 independent dimensions** (1-10 each) and computes a weighted composite:
+
+| Dimension | What's Scored | Example |
+|-----------|--------------|---------|
+| **Security** | Injection, XSS, auth bypass, secret exposure | "Parameterized queries in place, but CSRF protection missing" |
+| **Correctness** | Logic errors, concurrency, edge cases | "Core logic is sound, but race condition on balance check" |
+| **Performance** | Algorithm complexity, N+1 queries, resources | "N+1 query in get_orders — use JOIN" |
+| **Maintainability** | Readability, DRY, patterns, docs | "Clean overall, but parse_date has 5 boolean params" |
+| **Robustness** | Error handling, validation, retry/timeout | "External calls lack timeout and retry" |
+| **Completeness** | Spec coverage, acceptance criteria | "All P0 requirements met, 2 P1 items missing" |
+
+**Composite = Σ(dimension × weight) / Σ(weights)**. Default: all weights = 1.0.
+
+### Weight Presets
+
+```
+balanced:          all dimensions = 1.0  (default)
+security-first:    security = 2.0        (auth/payment/healthcare)
+performance-first: performance = 2.0     (high-throughput/low-latency)
+```
+
+Custom: `--score-weights security:3,performance:0.5`
+
+### Score Trend Visualization
+
+The pipeline shows quality evolution at completion:
+
+```
+📈 Score Trend:
+
+  R1: ██████░░░░ 6.2  Generator   Sec:5 Cor:7 Perf:6
+  R2: ████████░░ 7.8  Critic      Sec:8 Cor:8 Perf:7
+  R3: █████████░ 9.1  Refiner     Sec:9 Cor:9 Perf:9
+
+  Start: 6.2 → Final: 9.1 → +2.9 (+47%)
+```
+
+### Advisory Score Target
+
+```
+/multi-agent-code --target-score 8.5 --score-stability 2 "Build an API"
+```
+
+→ Highlights when the composite score is ≥ 8.5 for 2 consecutive rounds. Completion still requires executable validation, satisfied acceptance criteria, and no unresolved critical/high findings.
+
+---
+
 ## Review Strategies Compared
 
 | Strategy | How It Works | Best For | Token Cost |
@@ -228,7 +285,7 @@ Round 2: Coder(Critic修复) → Review → 仍有critical
 ```
 /multi-agent-code "Write a function to validate email addresses"
 ```
-→ Shows default config → Reply "go" → Pipeline runs with 10 max rounds, per_round review.
+→ Shows default config → Reply "go" → Pipeline runs with 5 max rounds, per_round review.
 
 ### Change specific params
 ```
@@ -258,58 +315,66 @@ Round 2: Coder(Critic修复) → Review → 仍有critical
 
 ## Output Structure
 
+Agents work **in-place within your project** — no isolated `output/` sandbox:
+
 ```
-output/
-├── requirements.md          # Your original request
-├── spec.md                  # Analyst output (if enabled)
-├── architecture.md          # Architect output (if enabled)
-├── change_log.md            # Latest coder's change log
-├── open_concerns.md         # Issues the coder flagged for attention
-├── [your code files]        # The actual code
-├── reviews/
-│   ├── review_round1.md     # Per-round review reports
-│   ├── review_round2.md
-│   └── review_final.md      # Batch review (if batch strategy)
-├── tests/                   # Tester output (if enabled)
-│   └── [test files]
-└── .pipeline/
-    ├── state.json           # Pipeline progress (for resume)
-    └── config.json          # Resolved parameters
+your-project/                       # ← Agents work right here
+├── src/                            # Application code
+├── tests/                          # Tests
+├── ...                             # Existing project files
+└── .pipeline/                      # Pipeline metadata
+    ├── project.json                # Discovered validation commands
+    ├── project_tree.txt            # Project structure snapshot
+    ├── config.json                 # Resolved parameters
+    └── tasks/
+        └── <task-id>/
+            ├── request.md
+            ├── spec.md             # If analyst ran
+            ├── architecture.md     # If architect ran
+            ├── baseline.json
+            ├── baseline.patch
+            ├── state.json
+            ├── validation.json
+            ├── change_log.md
+            ├── open_concerns.md
+            └── reviews/
 ```
+
+> 💡 **`.pipeline/` is the only new directory.** Add it to `.gitignore`. All pipeline metadata lives here — your project stays clean.
 
 ---
 
 ## Workflow Recipes
 
-### "Quick prototype"
-```
---max-rounds 1 --review batch
-```
-One coder, one review. ~2 agent calls. Fast.
-
 ### "Standard feature" (default)
 ```
-Just use the defaults: max 10 rounds, per_round review, stop on critical.
+/multi-agent-code "Build a user registration API"
 ```
-Generator → Critic → Refiner cycling with review each round. Stops when clean or on critical issues.
+Agents work directly in your project. Code lands in `src/`, tests in `tests/`. Max 5 rounds by default, stopping when the quality gates pass.
 
 ### "Mission-critical system"
 ```
---roles analyst,architect,tester --stop-on high --max-rounds 15
+/multi-agent-code --roles analyst,architect,tester --stop-on high --max-rounds 15 "Build a payment service"
 ```
-All 5 roles, stops on any high-severity finding, up to 15 refinement rounds.
+All 5 roles, 15 refinement rounds max.
 
-### "Safe exploration"
+### "Modify existing code"
 ```
---max-rounds 3 --stop-on medium --no-auto
+/multi-agent-code "Add OAuth2 social login to the auth module"
 ```
-Stops and asks you on any medium+ issue. Good when you want tight control.
+Agents auto-discover `src/auth.py` and modify it in-place. No manual file selection needed.
 
-### "Refactor existing code"
+### "Score-driven quality gate"
 ```
---files src/**/*.py "Refactor the DB layer to Repository pattern"
+/multi-agent-code --target-score 8.5 --score-stability 2 "Refactor the DB layer"
 ```
-Agents work on your existing files through the iteration rounds.
+Stops when code hits 8.5+ for 2 consecutive rounds.
+
+### "Sandbox mode" (when you want isolation)
+```
+/multi-agent-code --output-dir ./experiment "Try rewriting in Rust"
+```
+Code goes to `./experiment/` instead of your project.
 
 ---
 
@@ -340,6 +405,31 @@ This creates a **thinking-out-loud trail** so each agent builds on genuine under
 ---
 
 ## Installation
+
+This repository provides two entry points: Claude Code uses `CLAUDE.md`, while Codex uses the standard `SKILL.md`. Both share the role instructions under `prompts/`; the Codex package also includes `agents/openai.yaml` metadata.
+
+### Install for Codex
+
+Copy the complete `multi-agent-code` directory into your Codex skills directory, then invoke it with a prompt such as:
+
+```text
+Use $multi-agent-code to implement this request in the current project and verify it through iterative coding, review, and test rounds.
+```
+
+The skill uses real subagents when the host provides them. Otherwise it performs explicitly separated role passes with one model and discloses that the roles are simulated.
+
+### Markdown versus scripts
+
+- `SKILL.md` / `CLAUDE.md` define the workflow interpreted by the AI host.
+- `prompts/` define role-specific coding and review behavior.
+- `scripts/pipeline_state.py` deterministically creates task IDs, captures Git baselines, atomically updates state, and validates resume data.
+- The host product performs file edits, command execution, and subagent calls; this repository is not a standalone code-generation service.
+
+The state helper uses only the Python standard library. Run its tests with:
+
+```bash
+python -m unittest discover -s scripts -p "test_*.py" -v
+```
 
 1. Copy the `multi-agent-code/` directory into your Claude Code skills directory:
 

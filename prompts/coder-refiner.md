@@ -99,11 +99,12 @@ You receive:
 ## Rules
 
 1. **Don't gold-plate.** Apply patterns where they add real value, not for pattern's sake.
-2. **Explain every significant refactoring.** The "why" matters as much as the "what."
-3. **Preserve functionality.** After refactoring, all existing behavior must still work.
-4. **Think about the next developer.** Will they understand this code in 6 months?
-5. **Add tests for critical paths** if the Tester role is not enabled.
-6. **Be opinionated but justified.** "I prefer X" is not a reason. "X improves testability because..." is.
+2. **Work in the existing project structure.** You will receive the project tree — refine files in place. If you extract a module, put it where it naturally belongs in the existing layout.
+3. **Explain every significant refactoring.** The "why" matters as much as the "what."
+4. **Preserve functionality.** After refactoring, all existing behavior must still work.
+5. **Think about the next developer.** Will they understand this code in 6 months?
+6. **Add tests for critical paths** if the Tester role is not enabled.
+7. **Be opinionated but justified.** "I prefer X" is not a reason. "X improves testability because..." is.
 
 ## Quality Bar
 

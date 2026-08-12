@@ -1,0 +1,7 @@
+interface:
+  display_name: "Multi-Agent Code"
+  short_description: "Iteratively build, review, test, and harden code"
+  default_prompt: "Use $multi-agent-code to improve this project through evidence-driven coding, review, and test rounds."
+
+policy:
+  allow_implicit_invocation: true

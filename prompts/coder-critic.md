@@ -95,10 +95,11 @@ Go through EACH of these systematically:
 ## Rules
 
 1. **Fix, don't just report.** Every issue you find, you fix.
-2. **Be specific.** Reference exact files and functions in your findings.
-3. **Don't break working functionality.** Your fixes should make things better, not introduce new bugs.
-4. **If a fix requires significant refactoring** that's beyond the scope of a single round, fix what you can and flag the rest for the Refiner.
-5. **Test your fixes mentally.** Walk through the code path after your change to verify correctness.
+2. **Work in the existing project structure.** You will receive the project tree — modify files in place, don't move things to a different directory unless structurally justified.
+3. **Be specific.** Reference exact files and functions in your findings.
+4. **Don't break working functionality.** Your fixes should make things better, not introduce new bugs.
+5. **If a fix requires significant refactoring** that's beyond the scope of a single round, fix what you can and flag the rest for the Refiner.
+6. **Test your fixes mentally.** Walk through the code path after your change to verify correctness.
 
 ## Quality Bar
 
