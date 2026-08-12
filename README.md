@@ -9,7 +9,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-orange)](https://claude.ai/code)
 [![GitHub stars](https://img.shields.io/github/stars/fengzi-spec/multi-agent-code?style=social)](https://github.com/fengzi-spec/multi-agent-code)
-[中文文档](README_CN.md)
+[Chinese documentation](README_CN.md)
 
 > ⭐ **If you find this useful, please star this repo!** It helps others discover it.
 
@@ -39,28 +39,27 @@ The skill shows the **default configuration** and waits for your go-ahead:
 
 ```
 ╔══════════════════════════════════════════════════════════╗
-║           Multi-Agent Code — 当前配置                     ║
+║         Multi-Agent Code — Current Configuration         ║
 ╠══════════════════════════════════════════════════════════╣
-║  1. 最大轮次:     5     (跑到5轮或触发停止条件时停)       ║
-║  2. 可选角色:     无    (analyst / architect / tester)   ║
-║  3. 审查时机:     每轮   (每轮 / 每N轮 / 最后)            ║
-║  4. 停止条件:     critical (critical/high/medium时停)    ║
-║  5. 修复尝试:     1次    (发现严重问题后给几次修复机会)    ║
-║  6. 自动/手动:    自动   (修复失败后自动停还是问你)        ║
-║  7. 编程语言:     (自动检测)                              ║
-║  8. 输出目录:     . (当前项目)                           ║
-║  9. 目标评分:     关闭   (达到X分建议达标，0=关闭)        ║
-║ 10. 评分稳定性:   1轮    (连续N轮达标才标记稳定)           ║
-║ 11. 评分权重:     balanced (balanced/security-first/      ║
-║                          performance-first/自定义)        ║
+║  1. Max rounds:     5       (stop at limit or condition) ║
+║  2. Optional roles: none    (analyst/architect/tester)   ║
+║  3. Review timing:  per round (per round/every N/final)  ║
+║  4. Stop severity:  critical (critical/high/medium)      ║
+║  5. Fix attempts:   1       (after severe findings)      ║
+║  6. Auto/manual:    auto    (stop or ask after failure)  ║
+║  7. Language:       auto-detect                          ║
+║  8. Output dir:     .       (current project)            ║
+║  9. Target score:   off     (advisory; 0 disables)       ║
+║ 10. Score stability: 1 round (consecutive target rounds) ║
+║ 11. Score weights: balanced (security/perf/custom)       ║
 ║                                                          ║
-║  回复"go"使用默认配置，或者告诉我你想改的参数              ║
+║  Reply "go" for defaults, or describe your changes.      ║
 ╚══════════════════════════════════════════════════════════╝
 ```
 
 Reply **"go"** to accept the defaults, or change anything inline:
-- `"轮次改成5，加上架构师"` → max_rounds=5, roles add architect
-- `"每2轮审查，high时停止"` → review_strategy=milestone:2, stop_on=high
+- `"Use 5 rounds and add the architect"` → max_rounds=5, roles add architect
+- `"Review every 2 rounds and stop on high"` → review_strategy=milestone:2, stop_on=high
 
 Then the pipeline runs. It stops when:
 - **Validation passes + no critical/high findings** → quality achieved! ✅
@@ -126,18 +125,18 @@ User Request
 
 | Parameter | Default | What It Does |
 |-----------|---------|-------------|
-| **最大轮次** | `5` | Max coding rounds before the pipeline stops. Can be any positive number. |
-| **可选角色** | (none) | Enable `analyst`, `architect`, `tester`. `coder` + `reviewer` are always on. |
-| **审查时机** | `per_round` | `per_round` (every round), `milestone:N` (every N rounds), `batch` (after final round). |
-| **停止条件** | `critical` | If review finds issues at or above this severity, enter fix-attempt grace period. `critical` / `high` / `medium` / `never`. |
-| **修复尝试** | `1` | How many coding rounds to attempt fixes after severity threshold is hit. `0` = stop immediately. |
-| **自动/手动** | `true` | When fix attempts exhausted: `true` = auto-stop. `false` = pause and ask you. |
-| **编程语言** | auto-detect | Inferred from your task. Override with `--language`. |
-| **输出目录** | `.` (current project) | Where code is generated. Agents work in-place by default. Change to `./output` for sandbox mode. |
-| **上下文文件** | (none) | Existing files to modify or use as context. |
-| **目标评分** | `0` (off) | Advisory score target used to highlight progress. It never overrides validation. |
-| **评分稳定性** | `1` | Consecutive rounds above the advisory target before marking the score stable. |
-| **评分权重** | `balanced` | Weight preset: `balanced`, `security-first`, `performance-first`, or custom `security:3,performance:0.5`. |
+| **Max rounds** | `5` | Max coding rounds before the pipeline stops. Can be any positive number. |
+| **Optional roles** | (none) | Enable `analyst`, `architect`, `tester`. `coder` + `reviewer` are always on. |
+| **Review timing** | `per_round` | `per_round` (every round), `milestone:N` (every N rounds), `batch` (after final round). |
+| **Stop severity** | `critical` | If review finds issues at or above this severity, enter fix-attempt grace period. `critical` / `high` / `medium` / `never`. |
+| **Fix attempts** | `1` | How many coding rounds to attempt fixes after severity threshold is hit. `0` = stop immediately. |
+| **Automatic/manual** | `true` | When fix attempts exhausted: `true` = auto-stop. `false` = pause and ask you. |
+| **Programming language** | auto-detect | Inferred from your task. Override with `--language`. |
+| **Output directory** | `.` (current project) | Where code is generated. Agents work in-place by default. Change to `./output` for sandbox mode. |
+| **Context files** | (none) | Existing files to modify or use as context. |
+| **Target score** | `0` (off) | Advisory score target used to highlight progress. It never overrides validation. |
+| **Score stability** | `1` | Consecutive rounds above the advisory target before marking the score stable. |
+| **Score weights** | `balanced` | Weight preset: `balanced`, `security-first`, `performance-first`, or custom `security:3,performance:0.5`. |
 
 ### Three Ways to Configure
 
@@ -165,9 +164,9 @@ User Request
 | `--defaults` | `--defaults` | Skip config screen, use all defaults |
 
 **3. Natural language:**
-- "轮次改成8，加上架构师和测试" → max_rounds=8, add architect + tester
-- "每3轮审查一次，high时停止，手动确认" → milestone:3, stop_on=high, auto=false
-- "用Go写，最后再审查" → language=Go, review_strategy=batch
+- "Use 8 rounds and add the architect and tester" → max_rounds=8, add architect + tester
+- "Review every 3 rounds, stop on high, and ask me first" → milestone:3, stop_on=high, auto=false
+- "Use Go and review only at the end" → language=Go, review_strategy=batch
 
 ### Pipeline Stop Logic
 
@@ -176,15 +175,15 @@ When severity threshold is hit, the Critic gets `fix_attempts` chances to fix be
 
 ```
 Round 1: Coder → Review → 1 critical issue
-         → 进入修复期 (1次机会) → 继续
-Round 2: Coder(Critic修复) → Review → critical问题已修复 → ✅ 继续正常迭代
+         → enter fix period (1 attempt) → continue
+Round 2: Coder (Critic fix) → Review → critical issue fixed → ✅ continue
 Round 3: Coder → validation passes → Review finds no critical/high → ✅ STOP
 
--- 或者修复失败的场景 --
+-- Or when the fix fails --
 Round 1: Coder → Review → 1 critical issue
-         → 进入修复期 (fix_attempts=1) → 继续
-Round 2: Coder(Critic修复) → Review → 仍有critical 
-         → 修复机会用完 → ⚠️ STOP (severity threshold!)
+         → enter fix period (fix_attempts=1) → continue
+Round 2: Coder (Critic fix) → Review → critical issue remains
+         → fix attempts exhausted → ⚠️ STOP (severity threshold!)
 ```
 
 ### Role Descriptions
@@ -289,7 +288,7 @@ The pipeline shows quality evolution at completion:
 ```
 /multi-agent-code "Build a payment processing microservice"
 ```
-→ Shows defaults → Reply "轮次5，加上architect，high时停止" → Pipeline runs with your changes.
+→ Shows defaults → Reply "Use 5 rounds, add the architect, and stop on high" → Pipeline runs with your changes.
 
 ### All via flags (skip interactive)
 ```
