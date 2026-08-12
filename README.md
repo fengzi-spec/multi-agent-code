@@ -1,12 +1,17 @@
 
 
-# Multi-Agent Code Collaboration
+# 🤖 Multi-Agent Code Collaboration
 
-> Orchestrate multiple AI agents — Analyst, Architect, Coder, Reviewer, Tester — to build production-quality software through iterative handoffs, adversarial review, and configurable quality gates.
+> **5 AI agents. One pipeline. Production-quality code.**
+>
+> Analyst → Architect → Coder → Reviewer → Tester. Working together like a real dev team.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-orange)](https://claude.ai/code)
+[![GitHub stars](https://img.shields.io/github/stars/fengzi-spec/multi-agent-code?style=social)](https://github.com/fengzi-spec/multi-agent-code)
 [中文文档](README_CN.md)
+
+> ⭐ **If you find this useful, please star this repo!** It helps others discover it.
 
 ---
 

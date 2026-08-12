@@ -1,10 +1,15 @@
-# Multi-Agent Code — 多Agent协作编码
+# 🤖 Multi-Agent Code — 多Agent协作编码
 
-> 让多个 AI Agent（需求分析师、架构师、编码者、审查者、测试者）像真实软件团队一样协作，通过接力迭代、独立审查和可配置的质量门禁，构建生产级代码。
+> **5个AI Agent，一条流水线，生产级代码。**
+>
+> 需求分析师 → 架构师 → 编码者 → 审查者 → 测试者，像真实软件团队一样协作。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-orange)](https://claude.ai/code)
+[![GitHub stars](https://img.shields.io/github/stars/fengzi-spec/multi-agent-code?style=social)](https://github.com/fengzi-spec/multi-agent-code)
 [English](README.md)
+
+> ⭐ **如果觉得有用，请给个Star！** 让更多人看到这个项目。
 
 ---
 
